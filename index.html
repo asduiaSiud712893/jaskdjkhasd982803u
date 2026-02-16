@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>P2P Messenger</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+body {
+    font-family: monospace;
+    background: #0d1117;
+    color: #00ff88;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+#app {
+    width: 500px;
+    border: 1px solid #00ff88;
+    padding: 15px;
+}
+input, button {
+    background: black;
+    border: 1px solid #00ff88;
+    color: #00ff88;
+    padding: 5px;
+    margin: 3px;
+    width: 100%;
+}
+#chat {
+    height: 250px;
+    overflow-y: auto;
+    border: 1px solid #00ff88;
+    margin-bottom: 5px;
+    padding: 5px;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+    <div>Твой ID:</div>
+    <input id="myid" readonly>
+
+    <div>ID друга:</div>
+    <input id="peerid" placeholder="Вставь ID друга">
+
+    <button onclick="connect()">Подключиться</button>
+
+    <div id="chat"></div>
+
+    <input id="msg" placeholder="Сообщение">
+    <button onclick="send()">Отправить</button>
+</div>
+
+<script>
+let conn;
+let peer = new Peer();
+
+peer.on('open', id => {
+    document.getElementById("myid").value = id;
+});
+
+peer.on('connection', c => {
+    conn = c;
+    log("🔗 Подключился собеседник");
+    conn.on('data', data => log("Друг: " + data));
+});
+
+function connect(){
+    let id = document.getElementById("peerid").value;
+    conn = peer.connect(id);
+
+    conn.on('open', () => {
+        log("✅ Соединение установлено");
+    });
+
+    conn.on('data', data => log("Друг: " + data));
+}
+
+function send(){
+    let m = document.getElementById("msg").value;
+    if(!m) return;
+    conn.send(m);
+    log("Ты: " + m);
+    document.getElementById("msg").value = "";
+}
+
+function log(text){
+    let chat = document.getElementById("chat");
+    chat.innerHTML += text + "<br>";
+    chat.scrollTop = chat.scrollHeight;
+}
+</script>
+
+</body>
+</html>
