@@ -2,94 +2,196 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>P2P Messenger</title>
+
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
 <style>
+* { box-sizing: border-box; }
+
 body {
-    font-family: monospace;
-    background: #0d1117;
-    color: #00ff88;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+    background: #0f172a;
+    color: white;
+}
+
+.app {
+    max-width: 900px;
+    margin: auto;
     height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #020617;
 }
-#app {
-    width: 500px;
-    border: 1px solid #00ff88;
-    padding: 15px;
+
+.header {
+    background: #020617;
+    padding: 12px;
+    border-bottom: 1px solid #1e293b;
+    text-align: center;
+    font-weight: 600;
 }
-input, button {
-    background: black;
-    border: 1px solid #00ff88;
-    color: #00ff88;
-    padding: 5px;
-    margin: 3px;
-    width: 100%;
+
+.connect {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-bottom: 1px solid #1e293b;
+    flex-wrap: wrap;
 }
-#chat {
-    height: 250px;
+
+.connect input {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px;
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    color: white;
+}
+
+.connect button {
+    padding: 8px 12px;
+    background: #2563eb;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: 600;
+}
+
+.chat {
+    flex: 1;
+    padding: 10px;
     overflow-y: auto;
-    border: 1px solid #00ff88;
-    margin-bottom: 5px;
-    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.msg {
+    max-width: 75%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    word-wrap: break-word;
+}
+
+.me {
+    align-self: flex-end;
+    background: #2563eb;
+}
+
+.peer {
+    align-self: flex-start;
+    background: #1e293b;
+}
+
+.input {
+    display: flex;
+    padding: 10px;
+    gap: 8px;
+    border-top: 1px solid #1e293b;
+}
+
+.input input {
+    flex: 1;
+    padding: 10px;
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    color: white;
+}
+
+.input button {
+    padding: 10px 15px;
+    background: #2563eb;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 600px) {
+    .app {
+        height: 100dvh;
+    }
 }
 </style>
 </head>
+
 <body>
 
-<div id="app">
-    <div>Твой ID:</div>
-    <input id="myid" readonly>
+<div class="app">
+    <div class="header">🔐 P2P Messenger</div>
 
-    <div>ID друга:</div>
-    <input id="peerid" placeholder="Вставь ID друга">
+    <div class="connect">
+        <input id="myid" readonly placeholder="Твой ID">
+        <input id="peerid" placeholder="ID друга">
+        <button onclick="connect()">Подключиться</button>
+    </div>
 
-    <button onclick="connect()">Подключиться</button>
+    <div class="chat" id="chat"></div>
 
-    <div id="chat"></div>
-
-    <input id="msg" placeholder="Сообщение">
-    <button onclick="send()">Отправить</button>
+    <div class="input">
+        <input id="msg" placeholder="Сообщение">
+        <button onclick="send()">➤</button>
+    </div>
 </div>
 
 <script>
-let conn;
 let peer = new Peer();
+let conn = null;
 
 peer.on('open', id => {
     document.getElementById("myid").value = id;
+    log("🆔 Твой ID: " + id);
 });
 
 peer.on('connection', c => {
     conn = c;
-    log("🔗 Подключился собеседник");
-    conn.on('data', data => log("Друг: " + data));
+    setupConn();
+    log("🔗 Друг подключился");
 });
 
-function connect(){
-    let id = document.getElementById("peerid").value;
+function connect() {
+    let id = document.getElementById("peerid").value.trim();
+    if(!id) return alert("Введи ID друга");
+
     conn = peer.connect(id);
-
-    conn.on('open', () => {
-        log("✅ Соединение установлено");
-    });
-
-    conn.on('data', data => log("Друг: " + data));
+    setupConn();
 }
 
-function send(){
-    let m = document.getElementById("msg").value;
-    if(!m) return;
-    conn.send(m);
-    log("Ты: " + m);
-    document.getElementById("msg").value = "";
+function setupConn() {
+    conn.on('open', () => log("✅ Соединение установлено"));
+    conn.on('data', data => addMsg(data, "peer"));
 }
 
-function log(text){
+function send() {
+    if(!conn || !conn.open) return alert("Нет соединения");
+
+    let input = document.getElementById("msg");
+    let text = input.value.trim();
+    if(!text) return;
+
+    conn.send(text);
+    addMsg(text, "me");
+    input.value = "";
+}
+
+function addMsg(text, cls) {
+    let div = document.createElement("div");
+    div.className = "msg " + cls;
+    div.textContent = text;
+
     let chat = document.getElementById("chat");
-    chat.innerHTML += text + "<br>";
+    chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
+}
+
+function log(text) {
+    addMsg(text, "peer");
 }
 </script>
 
